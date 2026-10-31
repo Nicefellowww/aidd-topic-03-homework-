@@ -68,6 +68,11 @@ class RegistrationTests(TestCase):
 
 
 class AuthenticationTests(TestCase):
+    def test_documented_authentication_urls_are_public(self):
+        for url in ("/user/login/", "/user/registration/"):
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
+
     def setUp(self):
         self.user = User.objects.create_user(
             username="user@example.com",

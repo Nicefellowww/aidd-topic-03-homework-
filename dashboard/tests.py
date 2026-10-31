@@ -86,6 +86,7 @@ class ShareHtmlTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Apple")
         self.assertContains(response, "plotly")
+        self.assertContains(response, 'class="price-chart"')
 
     def test_detail_missing_share_returns_404(self):
         response = self.client.get(reverse("dashboard:detail", args=[99999]))
@@ -317,6 +318,39 @@ class PriceUpdateTests(TestCase):
 
 
 class GraphTests(TestCase):
+    def test_chart_preserves_daily_prices_and_resizes_with_parent(self):
+        from dashboard.services.graph import get_graph
+        from dashboard.services.providers import DemoMarketDataProvider
+
+        share = create_share(ticker="DEMOAAPL")
+        provider = DemoMarketDataProvider()
+        candles = provider.get_candles(share)
+        with patch("dashboard.services.graph.to_html", return_value="chart") as render:
+            get_graph(share, provider=provider)
+        figure = render.call_args.args[0]
+        self.assertEqual(len(figure.data[0].x), 180)
+        self.assertEqual(list(figure.data[0].y), [float(c.close) for c in candles])
+        self.assertGreater(max(figure.data[0].y), min(figure.data[0].y))
+        self.assertEqual(list(figure.data[0].x), sorted(c.time.date() for c in candles))
+        self.assertTrue(figure.layout.autosize)
+        self.assertIsNone(figure.layout.width)
+        self.assertTrue(figure.layout.xaxis.automargin)
+        self.assertTrue(figure.layout.yaxis.automargin)
+        self.assertTrue(render.call_args.kwargs["config"]["responsive"])
+
+    @override_settings(MARKET_DATA_PROVIDER="unknown")
+    def test_provider_configuration_failure_does_not_break_page(self):
+        from dashboard.services.graph import get_graph
+
+        self.assertIn("временно недоступны", get_graph(create_share()))
+
+    def test_empty_history_is_explained(self):
+        from dashboard.services.graph import get_graph
+
+        provider = Mock()
+        provider.get_candles.return_value = []
+        self.assertIn("Нет исторических данных", get_graph(create_share(), provider))
+
     @override_settings(MARKET_DATA_PROVIDER="demo")
     def test_demo_graph_is_generated(self):
         from dashboard.services.graph import get_graph

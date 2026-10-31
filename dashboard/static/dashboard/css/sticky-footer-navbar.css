@@ -2,3 +2,11 @@ main > .container {
   padding: 60px 15px 0;
 }
 
+/* Plotly emits percentage heights; its parent must have a definite height.
+   Keep enough room for both axes even on short or narrow viewports. */
+.price-chart {
+  width: 100%;
+  min-width: 0;
+  height: clamp(360px, 55vh, 520px);
+}
+

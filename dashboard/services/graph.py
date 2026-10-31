@@ -13,8 +13,8 @@ def get_graph(share, provider=None, days: int = 180):
     HTML fragment is returned instead of raising an exception.
     """
 
-    provider = provider or get_provider()
     try:
+        provider = provider or get_provider()
         candles = provider.get_candles(share, days=days)
     except Exception:
         logger.exception("Unable to load candles for share id %s", share.id)
@@ -38,13 +38,16 @@ def get_graph(share, provider=None, days: int = 180):
         ]
     )
     figure.update_layout(
-        margin={"l": 40, "r": 20, "t": 20, "b": 40},
+        autosize=True,
+        margin={"l": 60, "r": 24, "t": 24, "b": 64},
         xaxis_title="Дата",
         yaxis_title=f"Цена, {share.currency}",
     )
+    figure.update_xaxes(automargin=True, nticks=6, tickangle=0, title_standoff=12)
+    figure.update_yaxes(automargin=True, title_standoff=12)
     return to_html(
         figure,
         include_plotlyjs=False,
         full_html=False,
-        config={"displayModeBar": False},
+        config={"displayModeBar": False, "responsive": True},
     )

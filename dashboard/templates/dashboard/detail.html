@@ -30,9 +30,9 @@
     <div class="row mt-3">
         <div class="col-12">
             <h5>Исторические данные за 180 дней</h5>
-            {% autoescape off %}
-                {{ plot_div }}
-            {% endautoescape %}
+            <div class="price-chart">
+                {{ plot_div|safe }}
+            </div>
         </div>
     </div>
 {% endblock %}
