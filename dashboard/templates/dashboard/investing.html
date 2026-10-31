@@ -1,0 +1,34 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}<title>{{ title }}</title>{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p class="alert alert-warning">Все операции исключительно виртуальные.</p>
+<p>{{ help }}</p>
+{% if form %}<form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary">Сохранить</button></form>{% endif %}
+{% if period_form %}
+<form method="get">{{ period_form.as_p }}<button>Показать период</button></form>
+<p>Изменение: {{ change|default_if_none:'—' }}; {{ percent|default_if_none:'—' }} %</p>
+<div class="price-chart">{{ plot_div|safe }}</div>
+<table class="table"><tr><th>Время (UTC)</th><th>Цена</th><th>Валюта</th><th>Источник</th></tr>
+{% for item in observations %}<tr><td>{{ item.timestamp|date:'c' }}</td><td>{{ item.price }}</td><td>{{ item.currency }}</td><td>{{ item.source }}</td></tr>{% empty %}<tr><td>За выбранный период сохранённых котировок нет.</td></tr>{% endfor %}</table>
+{% endif %}
+{% if watches != None %}
+<h2>Мой список</h2>
+{% for item in watches %}<p>{{ item.share }}: {{ item.get_direction_display }} {{ item.target }} {{ item.share.currency }}</p>
+<form method="post" action="{% url 'dashboard:watch_delete' item.pk %}">{% csrf_token %}<button>Удалить</button></form>{% empty %}<p>Список пуст.</p>{% endfor %}
+<h2>Уведомления</h2>
+{% for item in notifications %}<p>{{ item.message }} ({{ item.observation.timestamp|date:'c' }}) {% if item.read %}Прочитано{% endif %}</p>
+{% if not item.read %}<form method="post" action="{% url 'dashboard:notification_read' item.pk %}">{% csrf_token %}<button>Прочитано</button></form>{% endif %}{% empty %}<p>Уведомлений нет.</p>{% endfor %}
+{% endif %}
+{% if portfolios != None %}<h2>Мои портфели</h2>{% for item in portfolios %}<p><a href="{% url 'dashboard:portfolio' item.pk %}">{{ item.name }} ({{ item.currency }})</a></p>{% empty %}<p>Портфелей нет.</p>{% endfor %}{% endif %}
+{% if strategies != None %}<h2>Мои стратегии</h2>{% for item in strategies %}<p><a href="{% url 'dashboard:strategy' item.pk %}">{{ item.name }}</a></p>{% empty %}<p>Стратегий нет.</p>{% endfor %}{% endif %}
+{% if strategy %}<p>Капитал: {{ strategy.initial_capital }} {{ strategy.portfolio.currency }}; деньги: {{ strategy.cash }}; оценка с деньгами: {{ equity|default_if_none:'—' }}; результат: {{ profit|default_if_none:'—' }} ({{ percent|default_if_none:'—' }} %)</p>{% endif %}
+{% if summary %}
+<h2>Позиции</h2><p>Стоимость: {{ summary.value|default_if_none:'нет полной оценки' }}; реализованный П/У: {{ summary.realized }}; нереализованный П/У: {{ summary.unrealized|default_if_none:'нет полной оценки' }}</p>
+<table class="table"><tr><th>Акция</th><th>Количество</th><th>Средняя цена</th><th>Стоимость</th><th>Реализованный П/У</th><th>Нереализованный П/У</th></tr>
+{% for row in summary.rows %}<tr><td>{{ row.position.share }}</td><td>{{ row.position.quantity }}</td><td>{{ row.position.average_price }}</td><td>{{ row.value|default_if_none:'—' }}</td><td>{{ row.position.realized }}</td><td>{{ row.unrealized|default_if_none:'—' }}</td></tr>{% empty %}<tr><td>Позиций нет.</td></tr>{% endfor %}</table>
+<h2>История виртуальных операций</h2><table class="table"><tr><th>Время (UTC)</th><th>Акция</th><th>Операция</th><th>Количество</th><th>Цена</th><th>Валюта</th><th>Реализованный П/У</th></tr>
+{% for item in trades %}<tr><td>{{ item.created_at|date:'c' }}</td><td>{{ item.share.ticker }}</td><td>{{ item.get_side_display }}</td><td>{{ item.quantity }}</td><td>{{ item.price }}</td><td>{{ item.currency }}</td><td>{{ item.realized }}</td></tr>{% empty %}<tr><td>Операций нет.</td></tr>{% endfor %}</table>
+{% endif %}
+{% if events != None %}<h2>Журнал стратегии</h2>{% for item in events %}<p>{{ item.observation.timestamp|date:'c' }}: {{ item.message }}</p>{% empty %}<p>Новых котировок после создания стратегии ещё нет.</p>{% endfor %}{% endif %}
+{% endblock %}

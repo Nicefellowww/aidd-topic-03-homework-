@@ -6,6 +6,7 @@ from .forms import ShareModelForm
 from .models import Share
 from .services.graph import get_graph
 from django.contrib.auth.mixins import UserPassesTestMixin
+from django.db.models.deletion import ProtectedError
 
 
 class IsUserAuthenticatedMixin(UserPassesTestMixin):
@@ -61,3 +62,10 @@ class ShareDeleteView(IsUserAuthenticatedMixin, DeleteView):
     model = Share
     template_name = "dashboard/delete.html"
     success_url = reverse_lazy("dashboard:index")
+
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except ProtectedError:
+            form.add_error(None, 'Акция используется в истории или персональных данных и не может быть удалена.')
+            return self.form_invalid(form)

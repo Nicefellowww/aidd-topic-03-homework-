@@ -1,32 +1,19 @@
 {% extends "dashboard/base.html" %}
-
-{% block title %}
-<title>Детальная информация</title>
-{% endblock %}
-
+{% block title %}<title>Детальная информация</title>{% endblock %}
 {% block content %}
-    <div class="row">
-    <div class="col3"></div>
-    <div class="col3">
-        Инструмент: {{ share.name }} <br>
-        Текущая цена: {{ share.last_price }} {{ share.currency }} <br>
-        Источник сохранённой цены: {{ share.price_source }}<br>Время котировки (UTC): {{ share.updated_at }}
+<div class="row">
+    <div class="col-12">
+        Инструмент: {{ share.name }}<br>
+        Текущая цена: {{ share.last_price }} {{ share.currency }}<br>
+        Источник сохранённой цены: {{ share.price_source }}<br>
+        Время котировки (UTC): {{ share.updated_at }}
     </div>
-    <div class="col3"></div>
+</div>
+<div class="row mt-3">
+    <div class="col-12">
+        <a href="{% url 'dashboard:history' share.pk %}">Накопленная история в БД</a>
+        <h5>Свечи провайдера (отдельный источник, не история БД)</h5>
+        <div class="price-chart">{{ plot_div|safe }}</div>
     </div>
-
-
-      <div class="row mt-3">
-    <div class="col3"></div>
-    <div class="col3">
-    <h5>Исторические данные: </h5>
- {% autoescape off %}
-  {{ plot_div }}
-  {% endautoescape %}
-    </div>
-    <div class="col3"></div>
-    </div>
-
-
-
+</div>
 {% endblock %}

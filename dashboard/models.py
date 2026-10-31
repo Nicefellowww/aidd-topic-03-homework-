@@ -35,3 +35,7 @@ class Share(models.Model):
     class Meta:
         verbose_name = "Акция"
         verbose_name_plural = "Акции"
+
+# Imported here so Django discovers the models and migrations normally.
+from .investing_models import (PriceObservation, WatchItem, Notification, Portfolio,
+                               Position, Trade, Strategy, StrategyEvent)  # noqa: E402,F401

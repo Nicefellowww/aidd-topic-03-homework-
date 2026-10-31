@@ -27,4 +27,4 @@ class UpgradeTests(TransactionTestCase):
             self.assertEqual(items[0].last_price, Decimal('123.75'))
             self.assertIsNone(items[0].updated_at)
         finally:
-            MigrationExecutor(connection).migrate(final)
+            MigrationExecutor(connection).migrate(MigrationExecutor(connection).loader.graph.leaf_nodes())

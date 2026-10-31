@@ -2,6 +2,8 @@
 <html lang="en" class="h-100">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>.price-chart {width:100%; min-width:0; overflow:hidden;} table {display:block; overflow-x:auto;} input,select {max-width:100%;}</style>
 
     {% block title %}
     {% endblock %}
@@ -17,6 +19,11 @@
     <header class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-between py-3 mb-4 border-bottom">
         <ul class="nav col-12 col-md-auto mb-2 justify-content-center mb-md-0">
             <li><a href="{% url 'dashboard:index' %}" class="nav-link px-2 link-secondary">Главная</a></li>
+            {% if user.is_authenticated %}
+            <li><a class="nav-link" href="{% url 'dashboard:watches' %}">Наблюдение</a></li>
+            <li><a class="nav-link" href="{% url 'dashboard:portfolios' %}">Портфели</a></li>
+            <li><a class="nav-link" href="{% url 'dashboard:strategies' %}">Стратегии</a></li>
+            {% endif %}
         </ul>
 
         <div class="col-md-3 text-end">

@@ -1,6 +1,5 @@
 import logging
 from django.conf import settings
-from django.db import transaction
 from config.celery import app
 from dashboard.models import Share
 from dashboard.services.market_data import get_last_data
@@ -16,18 +15,19 @@ def update_last_price():
             price, stamp = get_last_data(share)
             if not price.is_finite() or price < 0:
                 raise ValueError('Invalid price')
-            with transaction.atomic():
-                current = Share.objects.select_for_update().get(pk=share.pk)
-                # Reject duplicate and late observations, including overlapping jobs.
-                if current.updated_at and stamp <= current.updated_at:
-                    result['skipped'] += 1
-                    continue
-                trend = None if current.last_price is None or current.last_price == price else price > current.last_price
-                Share.objects.filter(pk=current.pk).update(
-                    last_price=price, is_trend_high=trend, updated_at=stamp,
-                    price_source=settings.MARKET_DATA_SOURCE)
+            from dashboard.services.investing import record_price
+            if record_price(share, price, stamp, settings.MARKET_DATA_SOURCE):
                 result['updated'] += 1
+            else:
+                result['skipped'] += 1
         except Exception:
             logger.warning('Price update failed for share %s', share.pk, exc_info=True)
             result['failed'] += 1
+    process_investing()
     return result
+
+
+@app.task
+def process_investing():
+    from dashboard.services.investing import process_pending
+    process_pending()
