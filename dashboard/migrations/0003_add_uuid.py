@@ -3,6 +3,13 @@
 from django.db import migrations, models
 
 
+def populate_uid(apps, schema_editor):
+    Share = apps.get_model("dashboard", "Share")
+    for share in Share.objects.using(schema_editor.connection.alias).all().iterator():
+        share.uid = f"legacy-{share.pk}"
+        share.save(using=schema_editor.connection.alias, update_fields=["uid"])
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("dashboard", "0002_update_share"),
@@ -12,7 +19,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="share",
             name="uid",
-            field=models.CharField(default="", max_length=255, unique=True),
-            preserve_default=False,
+            field=models.CharField(max_length=255, null=True),
+
         ),
+        migrations.RunPython(populate_uid, migrations.RunPython.noop),
+        migrations.AlterField(model_name="share", name="uid",
+                              field=models.CharField(max_length=255, unique=True)),
     ]

@@ -1,24 +1,20 @@
-from django.core.management.base import BaseCommand
-from tinkoff.invest import Client
-
-from config.settings import TINKOFF_TOKEN
+from django.core.management.base import BaseCommand, CommandError
+from django.db import IntegrityError, transaction
 from dashboard.models import Share
+from dashboard.services.market_data import MarketDataError, get_provider
 
 
 class Command(BaseCommand):
-    help = "Add shares to DB"
+    help = 'Import catalogue from explicitly configured MARKET_DATA_SOURCE'
 
     def handle(self, *args, **options):
-        with Client(TINKOFF_TOKEN) as client:
-            shares = client.instruments.shares()
-            for share in shares.instruments:
-                Share.objects.get_or_create(
-                    figi=share.figi,
-                    name=share.name,
-                    isin=share.isin,
-                    ticker=share.ticker,
-                    currency=share.currency,
-                    uid=share.uid,
-                )
-
-
+        try:
+            items = get_provider().shares()
+            with transaction.atomic():
+                for item in items:
+                    fields = dict(item)
+                    figi = fields.pop('figi')
+                    Share.objects.update_or_create(figi=figi, defaults=fields)
+        except (MarketDataError, IntegrityError) as exc:
+            raise CommandError('Import failed; catalogue unchanged. Check source/identifiers.') from exc
+        self.stdout.write(self.style.SUCCESS(f'Imported {len(items)} instruments'))

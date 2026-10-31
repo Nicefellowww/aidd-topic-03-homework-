@@ -1,23 +1,162 @@
-# investing
+# Investing Demo — модернизация (задание №3)
 
-# PostgreSQL (Docker)
-docker-compose -f docker-compose.yml up
+Общий каталог акций: HTML CRUD, регистрация, вход/выход, REST API, admin,
+импорт инструментов, график дневных свечей за 180 дней и обновление цен Celery.
+Функциональность задания №4 не добавлялась.
 
-# Tinkoff Invest API
-# TINKOFF_TOKEN указывается в config/settings.py
+Проверенное окружение: macOS arm64, Python **3.14.7**, Django **5.2.18 LTS**.
+Все установленные зависимости закреплены в `requirements.txt`; системные сервисы
+для локального демо не нужны. Django 5.2 поддерживает Python 3.14 начиная с 5.2.8:
+[официальные release notes](https://docs.djangoproject.com/en/5.2/releases/5.2/).
 
-# Первоначальная загрузка списка акций
+## Первый запуск на macOS
+
+Команды выполняются из корня текущей копии. Нужен уже установленный Python 3.14.
+
+```sh
+python3.14 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
+python -c 'from pathlib import Path; import secrets; p=Path(".env"); p.write_text(p.read_text().replace("DJANGO_SECRET_KEY=\n", "DJANGO_SECRET_KEY=" + secrets.token_urlsafe(48) + "\n"))'
+python manage.py migrate
 python manage.py add_shares
+python manage.py update_prices
+python manage.py runserver 127.0.0.1:8000
+```
 
-# Celery Beat
-celery -A config beat
+Если `.venv` и `.env` уже созданы, достаточно `source .venv/bin/activate` и последней
+команды. Не перезаписывайте существующий `.env` при повторном запуске.
+Локальный `.env` автоматически читается; переменные процесса имеют приоритет.
+Секрет обязателен, в репозиторий `.env` и SQLite не попадают.
 
-# Celery Worker
-celery -A config worker -l info
+Откройте [каталог](http://127.0.0.1:8000/), карточку по тикеру,
+[регистрацию](http://127.0.0.1:8000/user/registration/) и
+[API](http://127.0.0.1:8000/api/v1/shares/).
+После регистрации можно создавать, редактировать и удалять общие акции.
+Выход — POST с CSRF через кнопку в шапке. Пароли проверяются валидаторами Django;
+email регистрации нормализуется в нижний регистр и используется как username.
+Для [admin](http://127.0.0.1:8000/admin/) создайте отдельного администратора:
 
-# Celery Worker для Windows (Eventlet)
-pip install eventlet cryptography
-celery -A config worker -l info -P eventlet
+```sh
+python manage.py createsuperuser
+```
 
-# API
-# /api/v1/shares — работа с акциями
+Чтение HTML/API публично; запись требует аутентификации. API поддерживает сессию
+с CSRF и BasicAuthentication для локального тестирования (вне localhost нужен HTTPS).
+Admin сохраняет стандартные ограничения staff и permissions.
+Примеры API:
+
+```sh
+curl 'http://127.0.0.1:8000/api/v1/shares/?ticker=DEMO1'
+curl 'http://127.0.0.1:8000/api/v1/shares/?search=DEMO&ordering=-ticker&limit=2&offset=0'
+```
+
+Фильтры точного совпадения: `name`, `ticker`; поиск подстроки без учёта регистра:
+`name`, `ticker`; сортировка: `name`, `ticker` с необязательным `-`.
+Порядок по умолчанию `name, pk`. При создании обязательны
+`figi`, `uid`, `isin`, `name`, `ticker`, `currency`; `figi`, `uid`, `ticker` уникальны.
+Цена передаётся строкой десятичного числа. `updated_at`, `price_source`,
+`is_trend_high` доступны в API только для чтения.
+
+## Источники и правила цен
+
+По умолчанию `MARKET_DATA_SOURCE=demo`: три вымышленных инструмента DEMO1–DEMO3,
+180 воспроизводимых дневных точек, фиксированное время котировки
+2026-01-15 12:00 UTC и цены 100/200/300 + 0.123456789. Это **демонстрационные
+данные, не реальные котировки**. Предупреждение отображается на страницах;
+`price_source` у каждой сохранённой цены показывает `demo`, `tbank`, `manual`
+или `unknown` для унаследованных записей. Смена источника не меняет происхождение
+уже сохранённых цен. Demo не выдаёт цены для произвольных реальных инструментов,
+а T-Invest не запрашивает DEMO-инструменты. При смешанном каталоге задача
+продолжает обработку, логируя ошибки отдельных акций.
+
+Для реального провайдера задайте в `.env` `MARKET_DATA_SOURCE=tbank` и
+`TINKOFF_TOKEN=<ваш токен>`, затем перезапустите сервер/worker/beat, выполните
+`add_shares` и `update_prices`. Используется официальный HTTPS REST T-Invest:
+[контракт API](https://github.com/Tinkoff/investAPI/blob/main/src/docs/swagger-ui/openapi.yaml),
+[market data](https://developer.tbank.ru/invest/api/market-data-service).
+Устаревший Python SDK заменён стандартным HTTP-клиентом с таймаутом 15 секунд;
+автоматического переключения с реальных данных на demo нет.
+Импорт сопоставляет по FIGI, обновляет справочные поля и сохраняет цены;
+при конфликте уникальных идентификаторов весь импорт откатывается.
+`legacy-<pk>` после старой миграции — временный UID; импорт реального справочника
+обновляет его по FIGI. Уникальность тикера сохранена из исходной модели.
+
+`units + nano / 10^9` рассчитывается через Decimal. Хранятся до 15 целых и 9 дробных
+цифр: PostgreSQL NUMERIC(24,9), SQLite — десятичный текст, исключающий преобразование
+через REAL. Это обеспечивает точность дробных частей в обоих локальных режимах.
+Потерянную ранее дробную часть исходных FloatField/ответов без nano восстановить
+без нового запроса провайдера невозможно. График использует полную цену свечи;
+числа при отрисовке ограничены точностью JavaScript. Plotly встроен в HTML,
+доступ к CDN для графика не требуется; история в БД не накапливается.
+
+`updated_at` означает **время котировки провайдера в UTC**, а не время HTTP-запроса
+или изменения названия. Первая цена: тренд неизвестен (`null`); рост: `true`,
+снижение: `false`, равенство: `null` (нейтральный цвет, как неизвестное состояние).
+Ответ с временем меньше или равным сохранённому игнорируется; ошибки оставляют
+последнюю цену и время без изменений. Ручное изменение цены через HTML/API/admin
+маркируется `manual`, очищает время и тренд: время рыночной котировки неизвестно.
+При миграции старые ненадёжные auto_now-времена и тренды очищаются.
+
+## Фоновая работа и PostgreSQL
+
+По умолчанию период `PRICE_UPDATE_SECONDS=300` (5 минут), только положительное
+число секунд. `update_prices` запускает тот же код синхронно без брокера.
+Для фонового режима нужны уже доступные Redis и два отдельных терминала с
+активированным `.venv`:
+
+```sh
+celery -A config worker -l info --pool=solo --concurrency=1
+celery -A config beat -l info
+```
+
+На macOS локально используйте один worker и один beat. Таймаут задачи 180 секунд;
+новая попытка после ошибки — следующий период. Задачи в очереди имеют expires,
+старые котировки не перезаписывают новые; PostgreSQL блокирует строку при записи.
+SQLite предназначен для небольшого локального запуска, его блокировки не заменяют
+многопроцессную эксплуатацию PostgreSQL. При долгом импорте/большом каталоге нужно
+подобрать период/таймаут под ограничения провайдера. Системные сервисы автоматически
+не устанавливаются.
+
+Для PostgreSQL задайте `DB_ENGINE=postgresql` и все `POSTGRES_NAME`, `POSTGRES_USER`,
+`POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT` из `.env.example`, затем
+`python manage.py migrate`. SQLite и PostgreSQL — отдельные БД, автоматического
+переноса данных между ними нет. При уже установленном Docker можно по желанию
+поднять сервисы проекта (после задания пароля):
+
+```sh
+docker compose up -d db redis
+```
+
+Compose сохраняет PostgreSQL в именованном volume и публикует порты только на
+127.0.0.1. Эта команда в текущем окружении не проверена: Docker отсутствует.
+
+## Проверка
+
+```sh
+python -m pip check
+python manage.py check
+python manage.py makemigrations --check --dry-run
+python manage.py migrate
+python manage.py test
+python manage.py add_shares
+python manage.py update_prices
+python manage.py runserver 127.0.0.1:8000 --noreload
+```
+
+В другом терминале:
+
+```sh
+curl -i http://127.0.0.1:8000/
+curl -i http://127.0.0.1:8000/1
+curl -i 'http://127.0.0.1:8000/api/v1/shares/?search=DEMO&ordering=-ticker'
+curl -i -X POST -H 'Content-Type: application/json' -d '{}' http://127.0.0.1:8000/api/v1/shares/
+```
+
+Ожидается 200 для чтения, 403 для анонимного POST. ID 1 относится к чистой demo-БД;
+в существующей БД выбирайте ссылку из каталога. Набор тестов включает миграцию
+заполненной старой БД, права, CRUD, регистрацию/вход/выход, CSRF, admin, фильтры,
+импорт, цену с 24 значащими цифрами, тренды/время, сбой одного инструмента и графика.
+Реальные выполненные проверки и ограничения перечислены в `AGENT_LOG.md`.
+`runserver` и DEBUG=true предназначены для локальной разработки.

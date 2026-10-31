@@ -1,13 +1,17 @@
 import logging
+import os
+from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = ""
-
-DEBUG = True
-
-ALLOWED_HOSTS = []
+load_dotenv(BASE_DIR / ".env")
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if not SECRET_KEY:
+    raise ImproperlyConfigured("Set DJANGO_SECRET_KEY in environment or .env")
+DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() == "true"
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 
 INSTALLED_APPS = [
@@ -88,20 +92,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
-    # }
-    "default": {
+if os.environ.get("DB_ENGINE", "sqlite") == "postgresql":
+    DATABASES = {"default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "investing",
-        "USER": "postgres",
-        "PASSWORD": "postgres",
-        "HOST": "localhost",
-        "PORT": "5432",
-    }
-}
+        **{key: os.environ.get("POSTGRES_" + key, "")
+           for key in ("NAME", "USER", "PASSWORD", "HOST", "PORT")},
+    }}
+else:
+    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3",
+                              "NAME": os.environ.get("SQLITE_PATH", BASE_DIR / "db.sqlite3")}}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -131,14 +130,20 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-TINKOFF_TOKEN = ""
-
-"""Celery Configuration Options"""
-CELERY_TIMEZONE = "Europe/Moscow"
+TINKOFF_TOKEN = os.environ.get("TINKOFF_TOKEN", "")
+MARKET_DATA_SOURCE = os.environ.get("MARKET_DATA_SOURCE", "demo")
+if MARKET_DATA_SOURCE not in {"demo", "tbank"}:
+    raise ImproperlyConfigured("MARKET_DATA_SOURCE must be demo or tbank")
+PRICE_UPDATE_SECONDS = int(os.environ.get("PRICE_UPDATE_SECONDS", "300"))
+if PRICE_UPDATE_SECONDS <= 0:
+    raise ImproperlyConfigured("PRICE_UPDATE_SECONDS must be positive")
+CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60
-# CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672'
-CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
-
-"""Debug Celery"""
+CELERY_TASK_TIME_LIMIT = 180
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
 CELERY_TASK_ALWAYS_EAGER = False
+CELERY_BEAT_SCHEDULE = {"update-prices": {
+    "task": "dashboard.tasks.update_last_price", "schedule": PRICE_UPDATE_SECONDS,
+    "options": {"expires": PRICE_UPDATE_SECONDS},
+}}
+TEMPLATES[0]["OPTIONS"]["context_processors"].append("dashboard.context_processors.market_source")

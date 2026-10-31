@@ -32,12 +32,13 @@
                     <td><a href="{% url 'dashboard:detail' share.id %}"> {{share.ticker}} </a></td>
                     <td>{{share.name}}</td>
                     <td>{{share.isin}}</td>
-                    {%  if  share.is_trend_high %}
+                    {% if share.is_trend_high == True %}
                         <td style="background-color: mediumseagreen">
-                            {%  else  %}
+                            {% elif share.is_trend_high == False %}
                         <td style="background-color: palevioletred">
+                    {% else %}<td>
                     {% endif %}
-                    {{share.last_price}} {{ share.currency }}</td>
+                    {{share.last_price|default_if_none:"—"}} {{ share.currency }} ({{ share.price_source }})</td>
                     {% if user.is_authenticated %}
                         <td>
                             <a href="{% url 'dashboard:update' share.id %}" class="btn btn-secondary">

@@ -8,4 +8,4 @@ class ShareModelForm(forms.ModelForm):
 
     class Meta:
         model = Share
-        fields = "__all__"
+        exclude = ("is_trend_high",)
