@@ -1,0 +1,12 @@
+{% extends 'dashboard/base.html' %}
+{% block content %}
+<h1>Накопленная история: {{ share.ticker }}</h1>
+<p>Только записи БД, без подстановки свечей провайдера. Источник demo содержит синтетические цены. Валюта: {{ share.currency }}.</p>
+<form method="get">{{ form.as_p }}<button>Показать период</button></form>
+{% if points %}<p>Записей: {{ points|length }}. Изменение от первой до последней записи: {{ delta }} {{ share.currency }} ({{ percent|floatformat:2 }}%). При одной записи изменение равно нулю.</p>
+<div class="price-chart">{{ plot_div|safe }}</div>
+<div class="table-responsive"><table class="table"><thead><tr><th>Время котировки</th><th>Цена</th><th>Источник</th></tr></thead><tbody>
+{% for point in points %}<tr><td>{{ point.quoted_at }}</td><td>{{ point.price }}</td><td>{{ point.get_source_display }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% else %}<p>Нет сохранённых котировок за выбранный период. Запустите обновление цен; история не заполняется задним числом.</p>{% endif %}
+{% endblock %}

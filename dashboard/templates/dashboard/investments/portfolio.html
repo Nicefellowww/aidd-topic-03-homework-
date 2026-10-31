@@ -1,0 +1,17 @@
+{% extends 'dashboard/base.html' %}
+{% block content %}
+<h1>{{ portfolio }}</h1>
+<p>Виртуальные операции. Стоимость рассчитана по последней цене справочника; при отсутствии цены итог недоступен. Комиссии, налоги и валютная конвертация не учитываются.</p>
+<h2>Позиции</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Акция</th><th>Количество</th><th>Средняя покупка</th><th>Текущая цена</th><th>Стоимость</th><th>Нереализованный P/L</th><th>Реализованный P/L</th></tr></thead><tbody>
+{% for row in rows %}<tr><td>{{ row.position.share.ticker }}</td><td>{{ row.position.quantity }}</td><td>{{ row.position.average_price }}</td><td>{{ row.current|default_if_none:'—' }}</td><td>{{ row.value|default_if_none:'—' }}</td><td>{{ row.pnl|default_if_none:'—' }}</td><td>{{ row.position.realized_pnl }}</td></tr>{% empty %}<tr><td colspan="7">Позиций пока нет.</td></tr>{% endfor %}
+</tbody></table></div>
+<p>Валюта всех итогов: {{ portfolio.currency }}. Себестоимость: {{ totals.cost }}. Текущая стоимость: {{ totals.value|default_if_none:'—' }}.
+Реализованный P/L: {{ totals.realized }}. Нереализованный P/L: {{ totals.unrealized|default_if_none:'—' }}. Общий P/L: {{ totals.pnl|default_if_none:'—' }}.</p>
+<h2>Записать виртуальную сделку</h2>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary">Выполнить виртуальную операцию</button></form>
+<h2>История операций</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Время</th><th>Акция</th><th>Операция</th><th>Количество</th><th>Цена</th><th>Реализованный P/L</th></tr></thead><tbody>
+{% for trade in trades %}<tr><td>{{ trade.created_at }}</td><td>{{ trade.share.ticker }}</td><td>{{ trade.get_side_display }}</td><td>{{ trade.quantity }}</td><td>{{ trade.price }} {{ portfolio.currency }}</td><td>{{ trade.realized_pnl }}</td></tr>{% empty %}<tr><td colspan="6">Операций пока нет.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

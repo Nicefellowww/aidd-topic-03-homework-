@@ -1,4 +1,4 @@
-from django.utils import timezone
+from django.conf import settings
 
 from config.celery import app
 from config.settings import logger
@@ -26,24 +26,29 @@ def calculate_trend(previous_price, current_price):
 def update_last_price():
     """Update the last price and trend flag for every share.
 
-    ``updated_at`` is set explicitly because ``QuerySet.update()`` bypasses
-    ``auto_now``; the field means "time of the last successful price update".
+    Each provider event is persisted atomically with the current price.
+    The shared service uses save() so auto_now updates the successful-fetch time;
+    duplicate provider events do not create additional history rows.
     """
+
+    from dashboard.services.investing import record_quote, process_rules
 
     updated = 0
     for share in Share.objects.all().iterator():
         try:
-            [last_price, _quote_time] = get_last_data(share)
-            previous_price = share.last_price
-            share.last_price = last_price
-            share.is_trend_high = calculate_trend(previous_price, last_price)
-            share.updated_at = timezone.now()
-            share.save(
-                update_fields=["last_price", "is_trend_high", "updated_at"]
-            )
+            [last_price, quote_time] = get_last_data(share)
+            record_quote(share.pk, last_price, quote_time, settings.MARKET_DATA_PROVIDER)
             updated += 1
         except Exception:
             logger.exception("Unable to update price for share id %s", share.id)
 
     logger.info("Price update finished, updated %s shares", updated)
+    process_rules()
     return updated
+
+
+@app.task
+def process_investments():
+    """Retry alert/strategy processing independently of quote fetching."""
+    from dashboard.services.investing import process_rules
+    return process_rules()

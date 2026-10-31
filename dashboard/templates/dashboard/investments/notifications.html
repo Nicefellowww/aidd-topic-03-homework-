@@ -1,0 +1,7 @@
+{% extends 'dashboard/base.html' %}
+{% block content %}
+<h1>Мои уведомления</h1>
+<ul>{% for item in notifications %}<li>{{ item.created_at }} — {{ item.message }} {% if item.read %}(прочитано){% else %}
+<form class="d-inline" method="post" action="{% url 'dashboard:notification_read' item.pk %}">{% csrf_token %}<button>Отметить прочитанным</button></form>{% endif %}
+</li>{% empty %}<li>Уведомлений пока нет.</li>{% endfor %}</ul>
+{% endblock %}

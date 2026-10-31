@@ -1,0 +1,15 @@
+{% extends 'dashboard/base.html' %}
+{% block content %}
+<h1>{{ strategy.name }}</h1>
+<p>{{ strategy.share.ticker }}; {{ strategy.currency }}; {{ strategy.get_source_display }}. {% if strategy.active %}Включена{% else %}Пауза{% endif %}</p>
+<p>Без позиции: покупка заданного количества при цене ≤ порога покупки, если хватает средств. С позицией: продажа всей позиции при цене ≥ порога продажи. Одна проверка на котировку; комиссии, налоги, проскальзывание и реальные сделки отсутствуют. Начало — с текущей сохранённой котировки, без ретроспективного прогона всей истории. На паузе события накапливаются и обрабатываются после включения.</p>
+<p>Начальный капитал: {{ strategy.initial_capital }}. Деньги: {{ strategy.cash }}. Количество: {{ strategy.quantity }}. Последняя цена: {{ summary.price|default_if_none:'—' }}.</p>
+<p>Капитал (деньги + позиция): {{ summary.equity|default_if_none:'—' }} {{ strategy.currency }}. Результат: {{ summary.pnl|default_if_none:'—' }} ({{ summary.percent|floatformat:2|default_if_none:'—' }}%).</p>
+<form method="post" action="{% url 'dashboard:strategy_run' strategy.pk %}">{% csrf_token %}<button class="btn btn-primary">Запустить по сохранённым котировкам</button></form>
+<h2>Настройки</h2><p>Изменение правил действует на ещё не обработанные события. Бумага, источник и начальный капитал фиксируются при создании.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button>Сохранить настройки</button></form>
+<h2>Журнал симуляции</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Котировка</th><th>Действие</th><th>Цена</th><th>Количество сделки</th><th>Деньги после</th><th>Позиция после</th><th>Причина</th></tr></thead><tbody>
+{% for item in executions %}<tr><td>{{ item.event.quoted_at }}</td><td>{{ item.get_action_display }}</td><td>{{ item.price }}</td><td>{{ item.quantity }}</td><td>{{ item.cash_after }}</td><td>{{ item.holdings_after }}</td><td>{{ item.reason }}</td></tr>{% empty %}<tr><td colspan="7">Нет обработанных котировок. Обновите цены и запустите проверку.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

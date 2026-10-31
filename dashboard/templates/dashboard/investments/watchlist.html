@@ -1,0 +1,12 @@
+{% extends 'dashboard/base.html' %}
+{% block content %}
+<h1>Мой список наблюдения</h1>
+<p>Одно условие на акцию. Уведомление при первом выполнении; повторное — только после выхода из условия и нового достижения. Изменённая цель применяется со следующей котировки.</p>
+<ul>{% for item in items %}<li>{{ item.share.ticker }} — {{ item.get_condition_display }} {{ item.target }} {{ item.share.currency }}; {{ item.get_source_display }}; {% if item.active %}включено{% else %}пауза{% endif %}
+<a href="{% url 'dashboard:watch_edit' item.pk %}">Изменить</a>
+<form class="d-inline" method="post" action="{% url 'dashboard:watch_check' item.pk %}">{% csrf_token %}<button>Проверить сохранённые цены</button></form>
+<form class="d-inline" method="post" action="{% url 'dashboard:watch_delete' item.pk %}">{% csrf_token %}<button>Удалить из списка</button></form>
+</li>{% empty %}<li>Список пуст.</li>{% endfor %}</ul>
+<h2>Добавить акцию и условие</h2>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary">Добавить</button></form>
+{% endblock %}

@@ -221,6 +221,10 @@ CELERY_TASK_TIME_LIMIT = env_int("CELERY_TASK_TIME_LIMIT", 30 * 60)
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND") or None
 CELERY_BEAT_SCHEDULE = {
+    "process-investments": {
+        "task": "dashboard.tasks.process_investments",
+        "schedule": PRICE_UPDATE_INTERVAL_SECONDS,
+    },
     "update-prices": {
         "task": "dashboard.tasks.update_last_price",
         "schedule": PRICE_UPDATE_INTERVAL_SECONDS,

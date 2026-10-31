@@ -51,3 +51,20 @@ def get_graph(share, provider=None, days: int = 180):
         full_html=False,
         config={"displayModeBar": False, "responsive": True},
     )
+
+
+
+def get_history_graph(points, currency):
+    """Render only persisted quotes; no provider calls and no synthetic fallback."""
+    if not points:
+        return ''
+    figure = go.Figure(data=[go.Scatter(
+        x=[point.quoted_at for point in points],
+        y=[float(point.price) for point in points], mode='lines+markers', name='Сохранённая цена',
+    )])
+    figure.update_layout(autosize=True, margin={'l': 60, 'r': 24, 't': 24, 'b': 64},
+                         xaxis_title='Время котировки', yaxis_title=f'Цена, {currency}')
+    figure.update_xaxes(automargin=True, nticks=6, tickangle=0, title_standoff=12)
+    figure.update_yaxes(automargin=True, title_standoff=12)
+    return to_html(figure, include_plotlyjs=False, full_html=False,
+                   config={'displayModeBar': False, 'responsive': True})

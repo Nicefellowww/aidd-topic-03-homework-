@@ -1,0 +1,7 @@
+{% extends 'dashboard/base.html' %}
+{% block content %}
+<h1>Мои виртуальные портфели</h1>
+<p>Реальных сделок нет. Каждый портфель имеет одну валюту; конвертация и общий итог по разным валютам не выполняются.</p>
+<ul>{% for item in portfolios %}<li><a href="{% url 'dashboard:portfolio' item.pk %}">{{ item }}</a></li>{% empty %}<li>Портфелей пока нет.</li>{% endfor %}</ul>
+<h2>Создать портфель</h2><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary">Создать</button></form>
+{% endblock %}

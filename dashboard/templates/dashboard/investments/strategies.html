@@ -1,0 +1,7 @@
+{% extends 'dashboard/base.html' %}
+{% block content %}
+<h1>Мои стратегии</h1>
+<p>Симулятор виртуальных сделок по накопленным котировкам. Реальных заявок нет.</p>
+<ul>{% for item in strategies %}<li><a href="{% url 'dashboard:strategy' item.pk %}">{{ item.name }}</a> — {{ item.share.ticker }} ({{ item.currency }}, {{ item.get_source_display }})</li>{% empty %}<li>Стратегий пока нет.</li>{% endfor %}</ul>
+<h2>Создать стратегию</h2><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary">Создать</button></form>
+{% endblock %}

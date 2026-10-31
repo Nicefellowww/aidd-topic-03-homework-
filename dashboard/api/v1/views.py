@@ -1,6 +1,8 @@
 from django.conf import settings
+from django.db.models.deletion import ProtectedError
 from django_filters import rest_framework as filters
 from rest_framework import viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
@@ -23,6 +25,12 @@ class ShareViewSet(viewsets.ModelViewSet):
     filterset_class = ShareFilter
     ordering_fields = ["name", "ticker"]
     search_fields = ["$name"]
+
+    def perform_destroy(self, instance):
+        try:
+            instance.delete()
+        except ProtectedError:
+            raise ValidationError('Акция используется в истории цен или персональных данных.')
 
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)

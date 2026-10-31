@@ -18,6 +18,12 @@
     <header class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-between py-3 mb-4 border-bottom">
         <ul class="nav col-12 col-md-auto mb-2 justify-content-center mb-md-0">
             <li><a href="{% url 'dashboard:index' %}" class="nav-link px-2 link-secondary">Главная</a></li>
+            {% if user.is_authenticated %}
+            <li><a class="nav-link px-2" href="{% url 'dashboard:watchlist' %}">Наблюдение</a></li>
+            <li><a class="nav-link px-2" href="{% url 'dashboard:notifications' %}">Уведомления</a></li>
+            <li><a class="nav-link px-2" href="{% url 'dashboard:portfolios' %}">Портфели</a></li>
+            <li><a class="nav-link px-2" href="{% url 'dashboard:strategies' %}">Стратегии</a></li>
+            {% endif %}
         </ul>
 
         <div class="col-md-3 text-end">
@@ -43,6 +49,7 @@
             </div>
         {% endif %}
 
+        {% for message in messages %}<div class="alert alert-info">{{ message }}</div>{% endfor %}
         {% block content %}
         {% endblock %}
     </div>
