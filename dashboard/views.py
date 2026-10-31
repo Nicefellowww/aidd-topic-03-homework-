@@ -1,19 +1,18 @@
-from django.shortcuts import render, redirect
+from django.contrib.auth.mixins import UserPassesTestMixin
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, ListView, View, UpdateView
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView, View
 
 from .forms import ShareModelForm
 from .models import Share
 from .services.graph import get_graph
-from django.contrib.auth.mixins import UserPassesTestMixin
 
 
 class IsUserAuthenticatedMixin(UserPassesTestMixin):
     def test_func(self):
         return self.request.user.is_authenticated
 
-    @staticmethod
-    def handle_no_permission():
+    def handle_no_permission(self):
         return redirect("dashboard:index")
 
 
@@ -27,10 +26,10 @@ class ShareListView(ListView):
 
 
 class ShareDetailView(View):
-    @staticmethod
-    def get(request, pk):
-        share = Share.objects.get(id=pk)
+    """Детальная информация об акции и график."""
 
+    def get(self, request, pk):
+        share = get_object_or_404(Share, pk=pk)
         return render(
             request,
             "dashboard/detail.html",
@@ -56,7 +55,7 @@ class ShareUpdateView(IsUserAuthenticatedMixin, UpdateView):
 
 
 class ShareDeleteView(IsUserAuthenticatedMixin, DeleteView):
-    """Удаление задачи"""
+    """Удаление инструмента"""
 
     model = Share
     template_name = "dashboard/delete.html"

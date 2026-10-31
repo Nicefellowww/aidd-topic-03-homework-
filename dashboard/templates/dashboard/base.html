@@ -1,29 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" class="h-100">
+<html lang="ru" class="h-100">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     {% block title %}
     {% endblock %}
 
     {% load static %}
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <link href="{% static 'dashboard/css/bootstrap.min.css'%}" rel="stylesheet">
-    <link href="{% static 'dashboard/css/sticky-footer-navbar.css'%}" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
-
-    <!-- Font Awesome -->
-    <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
-
-    <!-- Moment.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.23.0/moment.min.js" integrity="sha256-VBLiveTKyUZMEzJd6z2mhfxIqz3ZATCuVMawPZGzIfA=" crossorigin="anonymous"></script>
-
-    <!-- Tempus Dominus Bootstrap 4 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.1.2/css/tempusdominus-bootstrap-4.min.css" integrity="sha256-XPTBwC3SBoWHSmKasAk01c08M6sIA5gF5+sRxqak2Qs=" crossorigin="anonymous" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.1.2/js/tempusdominus-bootstrap-4.min.js" integrity="sha256-z0oKYg6xiLq3yJGsp/LsY9XykbweQlHl42jHv2XTBz4=" crossorigin="anonymous"></script>
-
-
+    <script src="https://cdn.plot.ly/plotly-4.1.1.min.js"></script>
+    <link href="{% static 'dashboard/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'dashboard/css/sticky-footer-navbar.css' %}" rel="stylesheet">
 </head>
 <body class="d-flex flex-column h-100">
 
@@ -35,24 +22,29 @@
 
         <div class="col-md-3 text-end">
             {% if user.is_authenticated %}
-                <p>Привет, {{ user.email }}
-                <a href="{% url 'user:logout' %}" class="btn btn-primary">Выход</a>
-                </p>
+                <span class="me-2">Привет, {{ user.email }}</span>
+                <form method="post" action="{% url 'user:logout' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">Выход</button>
+                </form>
             {% else %}
                 <a href="{% url 'user:auth' %}" class="btn btn-primary">Войти</a>
             {% endif %}
-
         </div>
     </header>
 </div>
 
 <main class="flex-shrink-0">
     <div class="container">
+        {% if market_data_is_demo %}
+            <div class="alert alert-warning" role="alert">
+                <strong>Демонстрационный источник данных.</strong>
+                Цены и графики синтетические и не являются реальными котировками.
+            </div>
+        {% endif %}
 
         {% block content %}
         {% endblock %}
-
-
     </div>
 </main>
 
@@ -64,7 +56,6 @@
         <p class="text-center text-muted">Investing</p>
     </div>
 </footer>
-
 
 </body>
 </html>

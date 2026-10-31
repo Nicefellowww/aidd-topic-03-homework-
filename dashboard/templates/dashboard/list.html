@@ -7,7 +7,7 @@
 {% block content %}
 
     {% if user.is_authenticated %}
-        <div>
+        <div class="mb-3">
             <a href="{% url 'dashboard:create' %}" class="btn btn-primary">Добавить</a>
         </div>
     {% endif %}
@@ -29,15 +29,17 @@
 
             {% for share in share_list %}
                 <tr>
-                    <td><a href="{% url 'dashboard:detail' share.id %}"> {{share.ticker}} </a></td>
-                    <td>{{share.name}}</td>
-                    <td>{{share.isin}}</td>
-                    {%  if  share.is_trend_high %}
+                    <td><a href="{% url 'dashboard:detail' share.id %}">{{ share.ticker }}</a></td>
+                    <td>{{ share.name }}</td>
+                    <td>{{ share.isin }}</td>
+                    {% if share.is_trend_high is None %}
+                        <td style="background-color: lightgray">
+                    {% elif share.is_trend_high %}
                         <td style="background-color: mediumseagreen">
-                            {%  else  %}
+                    {% else %}
                         <td style="background-color: palevioletred">
                     {% endif %}
-                    {{share.last_price}} {{ share.currency }}</td>
+                    {{ share.price_display }} {{ share.currency }}</td>
                     {% if user.is_authenticated %}
                         <td>
                             <a href="{% url 'dashboard:update' share.id %}" class="btn btn-secondary">
@@ -48,11 +50,8 @@
                             </a>
                         </td>
                     {% endif %}
-
                 </tr>
             {% endfor %}
-
-
 
             </tbody>
         </table>
@@ -79,10 +78,8 @@
             {% endif %}
         </div>
 
-
     {% else %}
         <p>Акций еще нет</p>
     {% endif %}
-
 
 {% endblock %}

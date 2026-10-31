@@ -1,36 +1,50 @@
-from datetime import timedelta
+from plotly import graph_objects as go
+from plotly.io import to_html
 
-from plotly.graph_objs import Scatter
-from plotly.offline import plot
-from tinkoff.invest import CandleInterval, Client
-from tinkoff.invest.utils import now
+from config.settings import logger
 
-from config.settings import TINKOFF_TOKEN
+from .providers import get_provider
 
 
-def get_graph(share):
-    with Client(TINKOFF_TOKEN) as client:
-        x_data, y_data = [], []
-        for candle in client.get_all_candles(
-            figi=share.figi,
-            from_=now() - timedelta(days=180),
-            interval=CandleInterval.CANDLE_INTERVAL_DAY,
-        ):
-            x_data.append(candle.time.date())
-            y_data.append(candle.close.units)
-    plot_div = plot(
-        [
-            Scatter(
-                x=x_data,
-                y=y_data,
+def get_graph(share, provider=None, days: int = 180):
+    """Build a Plotly price chart from the configured market data provider.
+
+    External failures must not break the detail page, therefore an explanatory
+    HTML fragment is returned instead of raising an exception.
+    """
+
+    provider = provider or get_provider()
+    try:
+        candles = provider.get_candles(share, days=days)
+    except Exception:
+        logger.exception("Unable to load candles for share id %s", share.id)
+        return (
+            '<p class="text-muted">Исторические данные временно недоступны.</p>'
+        )
+
+    if not candles:
+        return '<p class="text-muted">Нет исторических данных.</p>'
+
+    figure = go.Figure(
+        data=[
+            go.Scatter(
+                x=[candle.time.date() for candle in candles],
+                y=[float(candle.close) for candle in candles],
                 mode="lines",
-                name="test",
+                name="Цена закрытия",
                 opacity=0.8,
-                marker_color="red",
+                line={"color": "red"},
             )
-        ],
-        output_type="div",
-        show_link=False,
-        link_text="",
+        ]
     )
-    return plot_div
+    figure.update_layout(
+        margin={"l": 40, "r": 20, "t": 20, "b": 40},
+        xaxis_title="Дата",
+        yaxis_title=f"Цена, {share.currency}",
+    )
+    return to_html(
+        figure,
+        include_plotlyjs=False,
+        full_html=False,
+        config={"displayModeBar": False},
+    )

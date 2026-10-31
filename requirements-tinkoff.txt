@@ -1,0 +1,10 @@
+# Optional real market data provider.
+#
+# The PyPI project is currently quarantined and cannot be installed with pip.
+# Check https://pypi.org/project/tinkoff-investments/ for the current status.
+# If access is restored:
+#   pip install -r requirements-tinkoff.txt
+#
+# Alternative source (not pinned, review the commit before use):
+#   pip install "git+https://github.com/RussianInvestments/invest-python.git"
+tinkoff-investments==0.2.0b118

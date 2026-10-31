@@ -10,12 +10,16 @@
     <div class="col-4"></div>
     <div class="col-4">
 
-        <form method="post" enctype="multipart/form-data">
+        <form method="post">
             {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
             {% for field in form %}
-            {{ field|as_crispy_field }}
+                {{ field|as_crispy_field }}
             {% endfor %}
             <button class="w-100 btn btn-lg btn-primary mt-5" type="submit">Сохранить</button>
+            <a href="{% url 'dashboard:index' %}" class="w-100 btn btn-lg btn-outline-secondary mt-2">Отмена</a>
         </form>
     </div>
     <div class="col-4"></div>

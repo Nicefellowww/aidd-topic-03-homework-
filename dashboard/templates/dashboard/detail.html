@@ -1,4 +1,5 @@
 {% extends "dashboard/base.html" %}
+{% load tz %}
 
 {% block title %}
 <title>Детальная информация</title>
@@ -6,27 +7,32 @@
 
 {% block content %}
     <div class="row">
-    <div class="col3"></div>
-    <div class="col3">
-        Инструмент: {{ share.name }} <br>
-        Текущая цена: {{ share.last_price }} {{ share.currency }} <br>
-        Время последнего обновления: {{ share.updated_at }}
+        <div class="col-12">
+            <p>Инструмент: <strong>{{ share.name }}</strong> ({{ share.ticker }})</p>
+            <p>Текущая цена: {{ share.price_display }} {{ share.currency }}</p>
+            <p>
+                Время последнего обновления:
+                {% if share.updated_at %}{{ share.updated_at|localtime }}{% else %}—{% endif %}
+            </p>
+            <p>
+                Тренд:
+                {% if share.is_trend_high is None %}
+                    нет данных или цена не изменилась
+                {% elif share.is_trend_high %}
+                    растёт
+                {% else %}
+                    снижается
+                {% endif %}
+            </p>
+        </div>
     </div>
-    <div class="col3"></div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <h5>Исторические данные за 180 дней</h5>
+            {% autoescape off %}
+                {{ plot_div }}
+            {% endautoescape %}
+        </div>
     </div>
-
-
-      <div class="row mt-3">
-    <div class="col3"></div>
-    <div class="col3">
-    <h5>Исторические данные: </h5>
- {% autoescape off %}
-  {{ plot_div }}
-  {% endautoescape %}
-    </div>
-    <div class="col3"></div>
-    </div>
-
-
-
 {% endblock %}
